@@ -33,3 +33,5 @@ coverage/
 # Misc
 *.tgz
 .pnpmfile.cjs
+
+private/
