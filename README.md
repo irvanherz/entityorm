@@ -175,7 +175,7 @@ db.users.filter(u => u.deletedAt == null).toArray();
 
 ---
 
-### 📐 Template Literal and Expression Support
+## 📐 Template Literal and Expression Support
 
 EntityORM allows you to use JavaScript **template literals** and **arithmetic expressions** in `.map()` or `.filter()` functions. These expressions are parsed and converted into valid SQL.
 
