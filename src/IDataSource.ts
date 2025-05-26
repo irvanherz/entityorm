@@ -1,5 +1,5 @@
-import { IEngine } from "./IEngine";
+import { IEngine } from './IEngine'
 
 export interface IDataSource {
-  engine: IEngine;
+  engine: IEngine
 }

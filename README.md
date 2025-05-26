@@ -200,7 +200,46 @@ db.users
 
 ---
 
-## 🛠 Limitations
+Certainly! Here’s a more technical, slightly longer explanation you can include in your docs:
+
+---
+
+## 🛠 Acorn Parsing and External Scope Handling
+
+EntityORM leverages **Acorn**, a JavaScript parser, to statically analyze and convert JavaScript expressions inside `.map()` and `.filter()` callbacks into SQL queries. This approach allows you to write native JavaScript code that feels like array operations but runs as optimized SQL in the database.
+
+### Parsing Scope Limitations
+
+Acorn can only parse and understand variables that are explicitly declared or passed into the function’s parameter scope. This means:
+
+* Variables declared **inside** the callback function (e.g., `u` in `.map(u => ...)`) are fully understood.
+* **Literal values** and **supported JavaScript expressions** within the callback are parsed correctly.
+* However, **variables from outer lexical scopes** (e.g., constants, objects declared outside the `.map()` callback) are not automatically visible to Acorn’s static analysis.
+
+### How to Pass External Variables
+
+To reference external variables within your expressions, EntityORM provides the `.scope()` method. This explicitly injects external variables into the parsing context, enabling Acorn to resolve them during SQL generation:
+
+```ts
+const foo = 1;
+const bar = { num: 123 };
+
+const users = await db.users
+  .scope({ foo, bar })  // Inject external variables into parsing scope
+  .map(u => ({
+    id: u.id,
+    id_foo: u.id * foo,
+    id_bar: u.id * bar.num,
+  }))
+  .skip(5)
+  .toArray();
+```
+
+### Why This Matters
+
+Without using `.scope()`, Acorn treats external variables as **unknown identifiers** and cannot translate expressions involving them into valid SQL. This limitation exists because Acorn performs static parsing and does not execute your JavaScript code at runtime, so it cannot infer the values of variables outside the callback context.
+
+## 🛠 Other Limitations
 
 * ❌ Currently only supports PostgreSQL
 * ❌ `.map()` and `.filter()` are limited to simple field access, literal values, and supported string/number/boolean expressions
