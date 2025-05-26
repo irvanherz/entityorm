@@ -200,10 +200,6 @@ db.users
 
 ---
 
-Certainly! Here’s a more technical, slightly longer explanation you can include in your docs:
-
----
-
 ## 🛠 Acorn Parsing and External Scope Handling
 
 EntityORM leverages **Acorn**, a JavaScript parser, to statically analyze and convert JavaScript expressions inside `.map()` and `.filter()` callbacks into SQL queries. This approach allows you to write native JavaScript code that feels like array operations but runs as optimized SQL in the database.
