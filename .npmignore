@@ -1,0 +1,20 @@
+# Ignore source files (if you only publish compiled files)
+src/
+
+# Ignore configs and tools
+.eslintrc.js
+eslint.config.mjs
+tsconfig.json
+
+# Ignore dev files
+*.log
+*.tsbuildinfo
+.pnpm-debug.log*
+node_modules/
+tests/
+coverage/
+.vscode/
+
+# Ignore build output if you don't want to publish it directly (usually no)
+/dist/
+build/
