@@ -31,11 +31,10 @@ export interface IQueryable<T> {
   distinct(): IQueryable<T>
   orderBy(selector: ((value: T) => any) | string): IQueryable<T>
   orderByDescending(selector: ((value: T) => any) | string): IQueryable<T>
-  join<U, K, R>(
-    other: IQueryable<U>,
-    leftKeySelector: (left: T) => K,
-    rightKeySelector: (right: U) => K,
-    resultSelector: (left: T, right: U) => R
+  join<O, R>(
+    other: IQueryable<O>,
+    matcher: (left: T, right: O) => boolean,
+    resultSelector: (left: T, right: O) => R
   ): IQueryable<R>
   toArray(): Promise<any[]>
   first(): Promise<T | undefined>

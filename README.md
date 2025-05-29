@@ -189,6 +189,78 @@ db.users
 
 ---
 
+Here’s the refined documentation — now focusing purely on **method descriptions**, with a **clear section on deferred execution** under terminal methods:
+
+---
+
+## 📘 `IQueryable<T>` Methods
+
+The `IQueryable<T>` interface provides a composable, chainable API for building query expressions in a fluent and type-safe way, inspired by LINQ and Entity Framework.
+
+All intermediate methods (`filter`, `map`, `join`, etc.) are **deferred** — they collect metadata about the query without executing it. Execution only occurs when you invoke a **terminal method** such as `.toArray()`, `.first()`, or `.count()`.
+
+### 🔧 Chainable Methods
+
+#### `include<N extends keyof T>(navigation: N): IQueryable<T>`
+
+Includes a related entity via a navigation property for eager loading.
+
+#### `filter(predicate: (value: T) => boolean): IQueryable<T>`
+
+Adds a filtering condition to the query. Equivalent to a SQL `WHERE` clause.
+
+#### `skip(n: number): IQueryable<T>`
+
+Skips the first `n` records in the result. Useful for pagination.
+
+#### `take(n: number): IQueryable<T>`
+
+Limits the result to the first `n` records. Often used with `.skip()`.
+
+#### `map<TResult>(selector: (value: T) => TResult): IQueryable<TResult>`
+
+Transforms the query result using a projection function. Analogous to SQL `SELECT`.
+
+#### `distinct(): IQueryable<T>`
+
+Removes duplicate results based on the projected values. Semantics depend on the backend implementation.
+
+#### `orderBy(selector: ((value: T) => any) | string): IQueryable<T>`
+
+Sorts the results in ascending order. The selector can be a function or a property name.
+
+#### `orderByDescending(selector: ((value: T) => any) | string): IQueryable<T>`
+
+Sorts the results in descending order.
+
+#### `join<O, R>(other: IQueryable<O>, matcher: (left: T, right: O) => boolean, resultSelector: (left: T, right: O) => R): IQueryable<R>`
+
+Performs an inner join with another queryable. The `matcher` defines the join condition, and the `resultSelector` shapes the output.
+
+#### `scope(scopes: Record<string, any>): IQueryable<T>`
+
+Injects external variables into the query's scope for use in filters, projections, or computations.
+
+### 🔚 Terminal Methods — Execute the Query
+
+All query operations are **deferred** until one of the following terminal methods is called. These methods trigger SQL generation (or equivalent backend operation) and execute the query:
+
+#### `toArray(): Promise<any[]>`
+
+Executes the query and returns all results as an array.
+
+#### `first(): Promise<T | undefined>`
+
+Executes the query and returns the first result (if any), or `undefined`.
+
+#### `count(): Promise<number>`
+
+Executes the query and returns the number of matching records.
+
+> ⚠️ Until a terminal method is called, no data is fetched or processed — all intermediate calls build a query expression tree internally.
+
+---
+
 ## ✨ Features
 
 * ✅ **Array-like syntax**: `.map()`, `.filter()`, `.take()`, `.skip()`, `.orderBy()`, `.toArray()`

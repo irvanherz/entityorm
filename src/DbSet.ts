@@ -52,23 +52,12 @@ export class DbSet<T> implements IQueryable<T> {
     return this._withOp({ type: 'order', data: { fn, direction: 'desc' } })
   }
 
-  join<U, K = any, R = any>(
-    other: IQueryable<U>,
-    a: ((left: T) => K) | ((left: T, right: U) => boolean),
-    b?: (right: U) => K,
-    c?: (left: T, right: U) => R
-  ): IQueryable<any> {
-    let data: any = { other }
-
-    if (b && c) {
-      data.leftKeySelector = a
-      data.rightKeySelector = b
-      data.resultSelector = c
-    } else {
-      data.on = a
-      data.resultSelector = (l: T, r: U) => [l, r]
-    }
-
+  join<O, R>(
+    other: IQueryable<O>,
+    matcher: (left: T, right: O) => boolean,
+    mapper: (left: T, right: O) => R
+  ): IQueryable<R> {
+    let data: any = { other, matcher, mapper }
     return this._withOp({ type: 'join', data }) as any
   }
 

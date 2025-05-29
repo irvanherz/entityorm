@@ -2,7 +2,7 @@ import { EntityOrm } from '..'
 import { Column, HasMany, Table } from '../attributes'
 import { DbSet } from '../DbSet'
 import { IDataSource } from '../IDataSource'
-import { PostgresDataSource } from '../postgres'
+import { parseJoinMatcher, PostgresDataSource } from '../postgres'
 
 @Table({ name: 'courses' })
 class Course {
@@ -46,17 +46,31 @@ async function main() {
   const foo = 1
   const bar = { num: 123 }
 
+  //expr, leftSelects, rightSelects
+  const v = parseJoinMatcher('(a, b) => a.id == b.userId', [
+    { alias: 'left.id', target: '0.id' },
+    { alias: 'right.userId', target: '0.userId' },
+  ])
+  // const w = parseJoinMapper('(a, b) => ({ a: a.id, b: b.id })', [
+  //   { alias: '0.id', target: '0.id' },
+  //   { alias: '1.userId', target: '0.userId' },
+  // ])
+  console.log(v)
   const users = await db.users
     .scope({ foo, bar })
+    .filter((u) => u.id > foo)
     .map((u) => ({
       id: u.id,
       id_foo: u.id * foo,
       id_bar: u.id * bar.num,
+      uname: u.username,
+      greeting: `Hello, ${u.fullName.toUpperCase()}!`,
     }))
+    .orderByDescending((r) => r.uname.toLowerCase())
     .skip(5)
     .toArray()
 
-  console.log(JSON.stringify(users, null, 2))
+  console.log('RESULT:\n', JSON.stringify(users, null, 2))
 }
 
 main()
