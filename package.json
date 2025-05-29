@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "acorn": "^8.14.1",
-    "acorn-walk": "^8.3.4",
     "entityorm": "link:",
     "flat": "^6.0.1",
     "lodash": "^4.17.21",

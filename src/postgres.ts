@@ -1,12 +1,11 @@
 import acorn from 'acorn'
+import { flatten, unflatten } from 'flat'
+import _ from 'lodash'
+import { Pool } from 'pg'
+import { getColumnsMetadata, getRelationsMetadata, getTableMetadata } from './attributes'
+import { IDataSource } from './IDataSource'
 import { IEngine } from './IEngine'
 import { IQueryable, IQueryableState, QueryOperation } from './IQueryable'
-import { IDataSource } from './IDataSource'
-import { Pool } from 'pg'
-import { flatten, unflatten } from 'flat'
-import { getColumnsMetadata, getRelationsMetadata, getTableMetadata } from './attributes'
-import walk from 'acorn-walk'
-import _ from 'lodash'
 
 function exprToString(node: any, scope: Record<string, any>, fieldResolver: (path: string) => string): string {
   switch (node.type) {
@@ -218,285 +217,285 @@ function exprToString(node: any, scope: Record<string, any>, fieldResolver: (pat
   }
 }
 
-export function parseJoinMatcher(
-  matcher: string,
-  selects: { target: string; alias: string }[],
-  externalScope: Record<string, any> = {}
-): string {
-  const ast = acorn.parse(matcher, { ecmaVersion: 'latest' }) as any
+// export function parseJoinMatcher(
+//   matcher: string,
+//   selects: { target: string; alias: string }[],
+//   externalScope: Record<string, any> = {}
+// ): string {
+//   const ast = acorn.parse(matcher, { ecmaVersion: 'latest' }) as any
 
-  function fieldResolver(path: string): string {
-    const target = selects.find((item) => item.alias === path)
-    if (!target) {
-      const replacement = _.get(externalScope, path)
-      if (replacement === undefined) return '[Unknown target]'
-      return replacement
-    }
-    return target.target
-  }
+//   function fieldResolver(path: string): string {
+//     const target = selects.find((item) => item.alias === path)
+//     if (!target) {
+//       const replacement = _.get(externalScope, path)
+//       if (replacement === undefined) return '[Unknown target]'
+//       return replacement
+//     }
+//     return target.target
+//   }
 
-  function exprToString(node: any, scope: Record<string, any>): string {
-    switch (node.type) {
-      case 'CallExpression': {
-        const callee = node.callee
+//   function exprToString(node: any, scope: Record<string, any>): string {
+//     switch (node.type) {
+//       case 'CallExpression': {
+//         const callee = node.callee
 
-        if (callee.type === 'MemberExpression') {
-          const methodName = callee.property.name
-          const objectExpr = exprToString(callee.object, scope)
+//         if (callee.type === 'MemberExpression') {
+//           const methodName = callee.property.name
+//           const objectExpr = exprToString(callee.object, scope)
 
-          // --- String methods ---
-          if (methodName === 'toLowerCase') {
-            return `LOWER(${objectExpr})`
-          }
-          if (methodName === 'toUpperCase') {
-            return `UPPER(${objectExpr})`
-          }
-          if (methodName === 'trim') {
-            return `TRIM(${objectExpr})`
-          }
-          if (methodName === 'substring') {
-            const args = node.arguments
-            const start = args[0]?.value ?? 0
-            const length = args[1]?.value ?? null
-            if (length !== null) {
-              return `SUBSTRING(${objectExpr} FROM ${start + 1} FOR ${length})`
-            } else {
-              return `SUBSTRING(${objectExpr} FROM ${start + 1})`
-            }
-          }
-          if (methodName === 'includes') {
-            const arg = node.arguments[0]
-            if (arg.type === 'Literal' && typeof arg.value === 'string') {
-              // string includes: LIKE %value%
-              return `${objectExpr} LIKE '%${arg.value}%'`
-            } else {
-              // Could be array includes, see below
-            }
-          }
-          if (methodName === 'startsWith') {
-            const prefix = node.arguments[0]?.value
-            return `${objectExpr} LIKE '${prefix}%'`
-          }
-          if (methodName === 'endsWith') {
-            const suffix = node.arguments[0]?.value
-            return `${objectExpr} LIKE '%${suffix}'`
-          }
-          if (methodName === 'replace') {
-            const search = node.arguments[0]?.value
-            const replacement = node.arguments[1]?.value
-            return `REPLACE(${objectExpr}, '${search}', '${replacement}')`
-          }
+//           // --- String methods ---
+//           if (methodName === 'toLowerCase') {
+//             return `LOWER(${objectExpr})`
+//           }
+//           if (methodName === 'toUpperCase') {
+//             return `UPPER(${objectExpr})`
+//           }
+//           if (methodName === 'trim') {
+//             return `TRIM(${objectExpr})`
+//           }
+//           if (methodName === 'substring') {
+//             const args = node.arguments
+//             const start = args[0]?.value ?? 0
+//             const length = args[1]?.value ?? null
+//             if (length !== null) {
+//               return `SUBSTRING(${objectExpr} FROM ${start + 1} FOR ${length})`
+//             } else {
+//               return `SUBSTRING(${objectExpr} FROM ${start + 1})`
+//             }
+//           }
+//           if (methodName === 'includes') {
+//             const arg = node.arguments[0]
+//             if (arg.type === 'Literal' && typeof arg.value === 'string') {
+//               // string includes: LIKE %value%
+//               return `${objectExpr} LIKE '%${arg.value}%'`
+//             } else {
+//               // Could be array includes, see below
+//             }
+//           }
+//           if (methodName === 'startsWith') {
+//             const prefix = node.arguments[0]?.value
+//             return `${objectExpr} LIKE '${prefix}%'`
+//           }
+//           if (methodName === 'endsWith') {
+//             const suffix = node.arguments[0]?.value
+//             return `${objectExpr} LIKE '%${suffix}'`
+//           }
+//           if (methodName === 'replace') {
+//             const search = node.arguments[0]?.value
+//             const replacement = node.arguments[1]?.value
+//             return `REPLACE(${objectExpr}, '${search}', '${replacement}')`
+//           }
 
-          // --- Number methods ---
-          if (methodName === 'toFixed') {
-            const digits = node.arguments[0]?.value ?? 0
-            // In SQL: ROUND(value, digits)
-            return `ROUND(${objectExpr}, ${digits})`
-          }
-          if (methodName === 'toString') {
-            // Cast number to text
-            return `CAST(${objectExpr} AS TEXT)`
-          }
+//           // --- Number methods ---
+//           if (methodName === 'toFixed') {
+//             const digits = node.arguments[0]?.value ?? 0
+//             // In SQL: ROUND(value, digits)
+//             return `ROUND(${objectExpr}, ${digits})`
+//           }
+//           if (methodName === 'toString') {
+//             // Cast number to text
+//             return `CAST(${objectExpr} AS TEXT)`
+//           }
 
-          // --- Date methods ---
-          if (methodName === 'getFullYear') {
-            return `EXTRACT(YEAR FROM ${objectExpr})`
-          }
-          if (methodName === 'getMonth') {
-            // JS months are 0-based, SQL is 1-based, so subtract 1
-            return `(EXTRACT(MONTH FROM ${objectExpr}) - 1)`
-          }
-          if (methodName === 'getDate') {
-            return `EXTRACT(DAY FROM ${objectExpr})`
-          }
-          if (methodName === 'getHours') {
-            return `EXTRACT(HOUR FROM ${objectExpr})`
-          }
-          if (methodName === 'getMinutes') {
-            return `EXTRACT(MINUTE FROM ${objectExpr})`
-          }
-          if (methodName === 'getSeconds') {
-            return `EXTRACT(SECOND FROM ${objectExpr})`
-          }
+//           // --- Date methods ---
+//           if (methodName === 'getFullYear') {
+//             return `EXTRACT(YEAR FROM ${objectExpr})`
+//           }
+//           if (methodName === 'getMonth') {
+//             // JS months are 0-based, SQL is 1-based, so subtract 1
+//             return `(EXTRACT(MONTH FROM ${objectExpr}) - 1)`
+//           }
+//           if (methodName === 'getDate') {
+//             return `EXTRACT(DAY FROM ${objectExpr})`
+//           }
+//           if (methodName === 'getHours') {
+//             return `EXTRACT(HOUR FROM ${objectExpr})`
+//           }
+//           if (methodName === 'getMinutes') {
+//             return `EXTRACT(MINUTE FROM ${objectExpr})`
+//           }
+//           if (methodName === 'getSeconds') {
+//             return `EXTRACT(SECOND FROM ${objectExpr})`
+//           }
 
-          // --- Array methods ---
-          if (methodName === 'includes') {
-            // Example: someArray.includes(value) -> value = ANY(array)
-            // But if objectExpr is an array literal or column
-            const arg = node.arguments[0]
-            if (arg) {
-              const valueExpr = exprToString(arg, scope)
-              // Assuming objectExpr is an array column or literal
-              return `${valueExpr} = ANY(${objectExpr})`
-            }
-          }
-        }
-      }
-      case 'LogicalExpression': {
-        const left = exprToString(node.left, scope)
-        const right = exprToString(node.right, scope)
-        const operator = node.operator === '&&' ? 'AND' : node.operator === '||' ? 'OR' : null
-        if (!operator) throw new Error(`Unsupported logical operator: ${node.operator}`)
-        return `(${left} ${operator} ${right})`
-      }
-      case 'BinaryExpression': {
-        const left = exprToString(node.left, scope)
-        const right = exprToString(node.right, scope)
-        const op = node.operator
+//           // --- Array methods ---
+//           if (methodName === 'includes') {
+//             // Example: someArray.includes(value) -> value = ANY(array)
+//             // But if objectExpr is an array literal or column
+//             const arg = node.arguments[0]
+//             if (arg) {
+//               const valueExpr = exprToString(arg, scope)
+//               // Assuming objectExpr is an array column or literal
+//               return `${valueExpr} = ANY(${objectExpr})`
+//             }
+//           }
+//         }
+//       }
+//       case 'LogicalExpression': {
+//         const left = exprToString(node.left, scope)
+//         const right = exprToString(node.right, scope)
+//         const operator = node.operator === '&&' ? 'AND' : node.operator === '||' ? 'OR' : null
+//         if (!operator) throw new Error(`Unsupported logical operator: ${node.operator}`)
+//         return `(${left} ${operator} ${right})`
+//       }
+//       case 'BinaryExpression': {
+//         const left = exprToString(node.left, scope)
+//         const right = exprToString(node.right, scope)
+//         const op = node.operator
 
-        switch (op) {
-          case '==':
-            return `${left} = ${right}`
-          case '!=':
-            return `${left} <> ${right}`
-          case '>':
-          case '<':
-          case '>=':
-          case '<=':
-            return `${left} ${op} ${right}`
-          case '+': {
-            const leftExpr = `(${left})`
-            const rightExpr = `(${right})`
+//         switch (op) {
+//           case '==':
+//             return `${left} = ${right}`
+//           case '!=':
+//             return `${left} <> ${right}`
+//           case '>':
+//           case '<':
+//           case '>=':
+//           case '<=':
+//             return `${left} ${op} ${right}`
+//           case '+': {
+//             const leftExpr = `(${left})`
+//             const rightExpr = `(${right})`
 
-            const isDefinitelyNumber =
-              node.left.type === 'Literal' &&
-              typeof node.left.value === 'number' &&
-              node.right.type === 'Literal' &&
-              typeof node.right.value === 'number'
+//             const isDefinitelyNumber =
+//               node.left.type === 'Literal' &&
+//               typeof node.left.value === 'number' &&
+//               node.right.type === 'Literal' &&
+//               typeof node.right.value === 'number'
 
-            if (isDefinitelyNumber) {
-              return `${leftExpr} + ${rightExpr}`
-            }
+//             if (isDefinitelyNumber) {
+//               return `${leftExpr} + ${rightExpr}`
+//             }
 
-            // Default to string concat
-            return `${leftExpr}::text || ${rightExpr}::text`
-          }
-          case '-':
-          case '*':
-          case '/':
-          case '%':
-            return `(${left} ${op} ${right})`
-          default:
-            throw new Error(`Unsupported binary operator: ${op}`)
-        }
-      }
-      case 'TemplateLiteral': {
-        const parts: string[] = []
+//             // Default to string concat
+//             return `${leftExpr}::text || ${rightExpr}::text`
+//           }
+//           case '-':
+//           case '*':
+//           case '/':
+//           case '%':
+//             return `(${left} ${op} ${right})`
+//           default:
+//             throw new Error(`Unsupported binary operator: ${op}`)
+//         }
+//       }
+//       case 'TemplateLiteral': {
+//         const parts: string[] = []
 
-        for (let i = 0; i < node.quasis.length; i++) {
-          const raw = node.quasis[i].value.raw.replace(/'/g, "''")
-          if (raw.length > 0) {
-            parts.push(`'${raw}'`)
-          }
+//         for (let i = 0; i < node.quasis.length; i++) {
+//           const raw = node.quasis[i].value.raw.replace(/'/g, "''")
+//           if (raw.length > 0) {
+//             parts.push(`'${raw}'`)
+//           }
 
-          const expr = node.expressions[i]
-          if (expr) {
-            const exprSql = exprToString(expr, scope)
-            parts.push(`(${exprSql})::text`)
-          }
-        }
+//           const expr = node.expressions[i]
+//           if (expr) {
+//             const exprSql = exprToString(expr, scope)
+//             parts.push(`(${exprSql})::text`)
+//           }
+//         }
 
-        return parts.join(' || ')
-      }
-      case 'MemberExpression': {
-        // Handle nested member expressions, e.g. u.courses.meta.id
-        let objectStr = ''
-        if (node.object.type === 'Identifier') {
-          const objName = node.object.name
-          const propName = node.property.name || node.property.value
-          if (scope[objName] !== undefined) {
-            objectStr = scope[objName] ? `${scope[objName]}.${propName}` : propName
-          } else {
-            objectStr = `${objName}.${propName}`
-          }
-        } else {
-          // For nested member expression like (a.b).c
-          objectStr = exprToString(node.object, scope) + '.' + (node.property.name || node.property.value)
-        }
-        return fieldResolver(objectStr)
-      }
+//         return parts.join(' || ')
+//       }
+//       case 'MemberExpression': {
+//         // Handle nested member expressions, e.g. u.courses.meta.id
+//         let objectStr = ''
+//         if (node.object.type === 'Identifier') {
+//           const objName = node.object.name
+//           const propName = node.property.name || node.property.value
+//           if (scope[objName] !== undefined) {
+//             objectStr = scope[objName] ? `${scope[objName]}.${propName}` : propName
+//           } else {
+//             objectStr = `${objName}.${propName}`
+//           }
+//         } else {
+//           // For nested member expression like (a.b).c
+//           objectStr = exprToString(node.object, scope) + '.' + (node.property.name || node.property.value)
+//         }
+//         return fieldResolver(objectStr)
+//       }
 
-      case 'Identifier': {
-        // Variable: look up in scope
-        const name = node.name
-        if (scope[name] !== undefined) {
-          return fieldResolver(scope[name] || name)
-        }
-        return fieldResolver(scope[name] || name) //return name
-      }
+//       case 'Identifier': {
+//         // Variable: look up in scope
+//         const name = node.name
+//         if (scope[name] !== undefined) {
+//           return fieldResolver(scope[name] || name)
+//         }
+//         return fieldResolver(scope[name] || name) //return name
+//       }
 
-      case 'Literal': {
-        // Number or string literal
-        return node.raw
-      }
-      case 'CallExpression': {
-        // For .map calls handled in main function, just return something simple
-        // or you can extend if needed
-        return '[CallExpression]'
-      }
+//       case 'Literal': {
+//         // Number or string literal
+//         return node.raw
+//       }
+//       case 'CallExpression': {
+//         // For .map calls handled in main function, just return something simple
+//         // or you can extend if needed
+//         return '[CallExpression]'
+//       }
 
-      case 'ObjectExpression': {
-        // For nested objects, call extractMapping to handle properly
-        return JSON.stringify(extractMapping(node, scope))
-      }
+//       case 'ObjectExpression': {
+//         // For nested objects, call extractMapping to handle properly
+//         return JSON.stringify(extractMapping(node, scope))
+//       }
 
-      default:
-        return '[Unsupported Expression]'
-    }
-  }
+//       default:
+//         return '[Unsupported Expression]'
+//     }
+//   }
 
-  function extractMapping(node: any, scope: Record<string, any>): any {
-    if (node.type === 'ObjectExpression') {
-      const obj: Record<string, any> = {}
+//   function extractMapping(node: any, scope: Record<string, any>): any {
+//     if (node.type === 'ObjectExpression') {
+//       const obj: Record<string, any> = {}
 
-      for (const prop of node.properties) {
-        const key = prop.key.name || prop.key.value
-        const val = prop.value
+//       for (const prop of node.properties) {
+//         const key = prop.key.name || prop.key.value
+//         const val = prop.value
 
-        if (
-          val.type === 'CallExpression' &&
-          val.callee.type === 'MemberExpression' &&
-          val.callee.property.name === 'map'
-        ) {
-          const arrObj = val.callee.object // e.g. u.courses or c.meta
-          let objectPath = ''
+//         if (
+//           val.type === 'CallExpression' &&
+//           val.callee.type === 'MemberExpression' &&
+//           val.callee.property.name === 'map'
+//         ) {
+//           const arrObj = val.callee.object // e.g. u.courses or c.meta
+//           let objectPath = ''
 
-          if (arrObj.type === 'MemberExpression') {
-            const objName = arrObj.object.name
-            const propName = arrObj.property.name
-            objectPath = objName in scope ? (scope[objName] ? `${scope[objName]}.${propName}` : propName) : propName
-          }
+//           if (arrObj.type === 'MemberExpression') {
+//             const objName = arrObj.object.name
+//             const propName = arrObj.property.name
+//             objectPath = objName in scope ? (scope[objName] ? `${scope[objName]}.${propName}` : propName) : propName
+//           }
 
-          const innerFn = val.arguments[0]
-          const innerParam = innerFn.params[0].name
-          const innerScope = { ...scope, [innerParam]: objectPath }
+//           const innerFn = val.arguments[0]
+//           const innerParam = innerFn.params[0].name
+//           const innerScope = { ...scope, [innerParam]: objectPath }
 
-          obj[key] = extractMapping(innerFn.body, innerScope)
-        } else {
-          obj[key] = exprToString(val, scope)
-        }
-      }
+//           obj[key] = extractMapping(innerFn.body, innerScope)
+//         } else {
+//           obj[key] = exprToString(val, scope)
+//         }
+//       }
 
-      return obj
-    }
+//       return obj
+//     }
 
-    return null
-  }
+//     return null
+//   }
 
-  let finalResult = ''
-  walk.full(ast, (node) => {
-    if (node.type === 'ArrowFunctionExpression') {
-      const leftParamName = (node as any).params[0].name
-      const rightParamName = (node as any).params[1].name
-      const initialScope = {
-        [leftParamName]: '0',
-        [rightParamName]: '1',
-      } as Record<string, any>
-      finalResult = exprToString((node as any).body, initialScope)
-    }
-  })
-  return finalResult
-}
+//   let finalResult = ''
+//   walk.full(ast, (node) => {
+//     if (node.type === 'ArrowFunctionExpression') {
+//       const leftParamName = (node as any).params[0].name
+//       const rightParamName = (node as any).params[1].name
+//       const initialScope = {
+//         [leftParamName]: '0',
+//         [rightParamName]: '1',
+//       } as Record<string, any>
+//       finalResult = exprToString((node as any).body, initialScope)
+//     }
+//   })
+//   return finalResult
+// }
 
 export function parseProjection(
   mapper: string,
