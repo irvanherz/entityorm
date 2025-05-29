@@ -29,9 +29,10 @@
   },
   "dependencies": {
     "acorn": "^8.14.1",
-    "entityorm": "link:",
     "flat": "^6.0.1",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.21"
+  },
+  "peerDependencies": {
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2"
   }

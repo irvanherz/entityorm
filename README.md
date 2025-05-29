@@ -68,6 +68,80 @@ pnpm add entityorm
 yarn add entityorm
 ```
 
+Here's your updated README section including a clear **peer dependency installation guide**, **reflect-metadata import instruction**, and **TypeScript config setup** notes. I've added it right after the installation section for maximum clarity:
+
+---
+
+## 📦 Installation
+
+Install via your favorite package manager:
+
+```bash
+# Using npm
+npm install entityorm
+
+# Using pnpm
+pnpm add entityorm
+
+# Using yarn
+yarn add entityorm
+```
+
+---
+
+## ⚠️ Important Additional Setup Steps
+
+EntityORM has **peer dependencies** that you must install manually:
+
+```bash
+npm install pg reflect-metadata
+# or
+pnpm add pg reflect-metadata
+# or
+yarn add pg reflect-metadata
+```
+
+---
+
+### Import `reflect-metadata` at your application's root entry point
+
+EntityORM relies on `reflect-metadata` for decorators to work properly. Add this import **once** at the very top of your main entry file (e.g., `src/index.ts`, `src/main.ts`):
+
+```ts
+import "reflect-metadata";
+```
+
+---
+
+### Setup your TypeScript configuration (`tsconfig.json`)
+
+Make sure your `tsconfig.json` enables the following options for decorators and metadata support:
+
+```jsonc
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "experimentalDecorators": true, /** add this line*/
+    "emitDecoratorMetadata": true, /** add this line*/
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+---
+
+### Summary
+
+1. Install EntityORM and its peer dependencies (`pg`, `reflect-metadata`)
+2. Import `"reflect-metadata"` once at the root of your project
+3. Enable `experimentalDecorators` and `emitDecoratorMetadata` in your TypeScript config
+
+This setup ensures that EntityORM decorators and query parsing work smoothly in your TypeScript project.
+
 ---
 
 ## 🚀 Getting Started
