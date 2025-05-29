@@ -53,17 +53,22 @@ No query builders. No magic strings. Just native, intuitive syntax.
 
 ---
 
-<!-- ## 📦 Installation
+## 📦 Installation
 
 Install via your favorite package manager:
 
 ```bash
-pnpm add entityorm
-# or
+# Using npm
 npm install entityorm
+
+# Using pnpm
+pnpm add entityorm
+
+# Using yarn
+yarn add entityorm
 ```
 
---- -->
+---
 
 ## 🚀 Getting Started
 
