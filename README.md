@@ -68,8 +68,6 @@ pnpm add entityorm
 yarn add entityorm
 ```
 
-Here's your updated README section including a clear **peer dependency installation guide**, **reflect-metadata import instruction**, and **TypeScript config setup** notes. I've added it right after the installation section for maximum clarity:
-
 ---
 
 ## 📦 Installation
@@ -265,10 +263,6 @@ db.users
   }))
   .toArray();
 ```
-
----
-
-Here’s the refined documentation — now focusing purely on **method descriptions**, with a **clear section on deferred execution** under terminal methods:
 
 ---
 
